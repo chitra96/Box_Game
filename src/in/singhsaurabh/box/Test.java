@@ -12,7 +12,7 @@ public class Test {
         ExecutorService es = Executors.newCachedThreadPool();
         System.out.println("Do you want to start server? \n 1: start \n 2: continue");
         boolean flag = true;//in.nextInt();
-        int n = 5;
+        int n = 3;
         Server server = null;
         if (flag) {
             server = new Server();

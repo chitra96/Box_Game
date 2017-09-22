@@ -18,25 +18,21 @@ public class Game implements Runnable {
 
     public Game(Player pl) {
         players = new ArrayList<>();
-        board = new Board(this.n);
         player = pl;
         client = new Client("127.0.0.1");
         currPlayer = Player.DUMMY;
-//        System.out.println("client created");
-        // add player
         client.write(pl);
-//        System.out.println("game creation successful");
     }
 
     public void setBoardSize(int n) {
         this.n = n < 2 ? 2 : n;
+        board = new Board(this.n);
     }
 
     @Override
     public void run() {
         Scanner in = new Scanner(System.in);
         //will call and get set of players
-//        System.out.println("game run called");
         mainPlayer = client.getMainPlayer();
         System.out.println("Main Player: " + mainPlayer);
         client.setReady(true);
@@ -53,7 +49,6 @@ public class Game implements Runnable {
             System.out.println("Waiting for main player to start game");
         }
         players = client.getPlayers();
-//        System.out.println(players.size());
 
         while (!client.gameStarted()) {
             try {
@@ -68,42 +63,28 @@ public class Game implements Runnable {
         Edge tempEdge;
         while (!board.isAllMarked()) {
             try {
-                Thread.sleep(1000);
+                Thread.sleep(500);
             } catch (InterruptedException e) {
 
             }
-//            System.out.println(board);
             currPlayer = client.getNextPlayer();
+            bp.repaint();
             if (player.equals(currPlayer)) {
-//                System.out.println(currPlayer + " enter your move");
-//                while (true) {
-//                    tempEdge = new Edge(new Point(in.nextInt(), in.nextInt()), new Point(in.nextInt(), in.nextInt()));
-//                    if (board.canBeMarked(tempEdge)) {
-//                        break;
-//                    } else {
-//                        System.out.println("Could not be marked please try again");
-//                    }
-//                }
                 synchronized (lock) {
                     bp.turn = true;
-//                    System.out.println("going to wait");
                     while (!bp.isMoveAvail()) {
                         try {
                             Thread.sleep(300);
                         } catch (InterruptedException e) {
                         }
                     }
-//                    System.out.println("wait over");
                     tempEdge = bp.move;
-//                    System.out.println(tempEdge);
                     bp.turn = false;
                     bp.move = null;
                 }
                 client.write(tempEdge);
             }
-//            System.out.println("Waiting for players move");
             tempEdge = client.getNextEdge();
-//            System.out.println(currPlayer + " move is " + tempEdge);
             board.markEdge(tempEdge, currPlayer);
             if (!board.markSquare(currPlayer)) {
                 if (player.equals(currPlayer)) {

@@ -14,7 +14,7 @@ import java.util.List;
  */
 public class Server implements Runnable {
     private static final int PORT = 9002;
-    private static final Color[] colors = {Color.red, Color.green, Color.blue, Color.yellow, Color.magenta, Color.cyan};
+    private static final Color[] colors = {Color.red, Color.black, Color.blue, Color.yellow, Color.magenta, Color.cyan};
     private static Map<String, InternalClient> map = new HashMap<>();
     private static boolean running = false;
     Player currPlayer, mainPlayer;
@@ -44,7 +44,6 @@ public class Server implements Runnable {
     }
 
     public void startGame() {
-        System.out.println();
         if (running) return;
 
         currPlayers = new ArrayList<>();
@@ -69,7 +68,6 @@ public class Server implements Runnable {
             coll = map.values();
         }
         for (InternalClient c : coll) {
-//            System.out.println("SERVER: " + c.player + " ready " + c.ready);
             if (!c.ready) {
                 flag = false;
                 break;
@@ -83,21 +81,17 @@ public class Server implements Runnable {
             running = false;
             currPlayers = null;
             itr = null;
-
         }
     }
 
     private void nextPlayer() {
         synchronized (itr) {
-
-//            System.out.println("Server: nextPlayer: prevValue: " + currPlayer + " " + itr.hasNext());
             if (itr.hasNext()) {
                 currPlayer = itr.next();
             } else {
                 itr = currPlayers.iterator();
                 currPlayer = itr.next();
             }
-//            System.out.println("Server: nextPlayer: newValue: " + currPlayer);
         }
     }
 
@@ -130,11 +124,9 @@ public class Server implements Runnable {
                 c.in = new ObjectInputStream(c.socket.getInputStream());
                 while (true) {
                     obj = c.in.readObject();
-                    print(obj);
                     if (obj instanceof String) {
                         String temp = (String) obj;
                         if (temp.equals("PLAYERS")) {
-                            print("asked for players");
                             ArrayList<Player> playerList = new ArrayList<>();
                             Collection<InternalClient> coll;
                             synchronized (map) {
@@ -148,14 +140,11 @@ public class Server implements Runnable {
                             synchronized (c) {
                                 c.ready = true;
                             }
-                            print(" ready " + c.ready);
                         } else if ("NOT READY".equals(temp)) {
                             synchronized (c) {
                                 c.ready = false;
                             }
-                            print(" ready " + c.ready);
                         } else if ("Main Player".equals(temp)) {
-                            print("main Player: " + mainPlayer);
                             write(mainPlayer);
                         } else if ("START".equals(temp)) {
                             if (c.player.equals(mainPlayer)) {
@@ -164,10 +153,11 @@ public class Server implements Runnable {
                         } else if ("IS GAME STARTED".equals(temp)) {
                             write(running);
                         } else if ("ALL READY".equals(temp)) {
-                            print("allReady " + allReady());
                             writeToPlayer(allReady(), mainPlayer);
                         } else if ("Next Player".equals(temp)) {
                             nextPlayer();
+                        } else if ("GAME OVER".equals(temp)) {
+                            end();
                         }
                     } else if (obj instanceof Player) {
                         Player tempPl = (Player) obj;
@@ -178,7 +168,6 @@ public class Server implements Runnable {
                                 map.put(tempPl.getName(), c);
                             }
                         }
-                        print("player data " + tempPl);
                     } else if (obj instanceof Edge) {
                         Edge currEdge = (Edge) obj;
                         writeToAll(currEdge);
@@ -223,10 +212,10 @@ public class Server implements Runnable {
                 }
             });
         }
-
-        public void print(Object obj) {
-            //printMsg(obj, c.player);
-        }
+//
+//        public void print(Object obj) {
+//            printMsg(obj, c.player);
+//        }
     }
 
 
