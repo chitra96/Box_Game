@@ -4,6 +4,7 @@ import java.awt.*;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.*;
@@ -13,19 +14,29 @@ import java.util.List;
  * @author Saurabh Singh
  */
 public class Server implements Runnable {
-    private static final int PORT = 9002;
-    private static final Color[] colors = {Color.red, Color.black, Color.blue, Color.yellow, Color.magenta, Color.cyan};
+    private static final int PORT = 9002, MAX_PLAYERS = 2;
+    private static final Color[] colors = {Color.red, Color.blue, Color.yellow, Color.magenta, Color.cyan, new Color(200, 0, 150)};
     private static Map<String, InternalClient> map = new HashMap<>();
     private static boolean running = false;
     Player currPlayer, mainPlayer;
-    Game game;
     private List<Player> currPlayers;
     private Iterator<Player> itr;
     private ServerSocket socket;
+    private static int size = 5;
 
     public Server() {
         try {
-            socket = new ServerSocket(PORT);
+            socket = new ServerSocket(PORT, 50, InetAddress.getLocalHost());
+            System.out.println("Server started on " + InetAddress.getLocalHost().toString());
+        } catch (IOException e) {
+
+        }
+    }
+
+    public Server(String host) {
+        try {
+            socket = new ServerSocket(PORT, 50, InetAddress.getByName(host));
+            System.out.println("Server started on " + socket.getInetAddress());
         } catch (IOException e) {
 
         }
@@ -52,7 +63,7 @@ public class Server implements Runnable {
             coll = map.values();
         }
         for (InternalClient c : coll) {
-            if (c.ready) {
+            if (c.player.isReady()) {
                 currPlayers.add(c.player);
             }
         }
@@ -68,7 +79,7 @@ public class Server implements Runnable {
             coll = map.values();
         }
         for (InternalClient c : coll) {
-            if (!c.ready) {
+            if (!c.player.isReady()) {
                 flag = false;
                 break;
             }
@@ -133,39 +144,47 @@ public class Server implements Runnable {
                                 coll = map.values();
                             }
                             coll.forEach(c -> playerList.add(c.player));
+                            playerList.forEach(p -> System.out.println("SERVER: " + p.getName() + " " + p.isReady()));
                             write(playerList);
                         } else if ("NextPlayer".equals(temp)) {
                             write(currPlayer);
                         } else if ("READY".equals(temp)) {
-                            synchronized (c) {
-                                c.ready = true;
+                            synchronized (map) {
+                                map.get(c.player.getId()).player.setReady(true);
                             }
                         } else if ("NOT READY".equals(temp)) {
-                            synchronized (c) {
-                                c.ready = false;
+                            synchronized (map) {
+                                map.get(c.player.getId()).player.setReady(false);
                             }
                         } else if ("Main Player".equals(temp)) {
                             write(mainPlayer);
                         } else if ("START".equals(temp)) {
-                            if (c.player.equals(mainPlayer)) {
-                                startGame();
+                            synchronized (map) {
+                                map.get(c.player.getId()).player.setReady(true);
                             }
+                            startGame();
                         } else if ("IS GAME STARTED".equals(temp)) {
                             write(running);
                         } else if ("ALL READY".equals(temp)) {
-                            writeToPlayer(allReady(), mainPlayer);
+                            write(allReady());
                         } else if ("Next Player".equals(temp)) {
                             nextPlayer();
                         } else if ("GAME OVER".equals(temp)) {
                             end();
+                        } else if ("SQUARE SIZE".equals(temp)) {
+                            int tempSize;
+                            synchronized (this) {
+                                tempSize = size;
+                            }
+                            write(tempSize);
                         }
                     } else if (obj instanceof Player) {
                         Player tempPl = (Player) obj;
                         c.player = tempPl;
                         synchronized (map) {
-                            if (map.entrySet().size() <= 6) {
+                            if (map.entrySet().size() < MAX_PLAYERS) {
                                 c.player.setColor(colors[map.size()]);
-                                map.put(tempPl.getName(), c);
+                                map.put(tempPl.getId(), c);
                             }
                         }
                     } else if (obj instanceof Edge) {
@@ -192,8 +211,8 @@ public class Server implements Runnable {
 
         public synchronized void writeToPlayer(Object obj, Player pl) {
             try {
-                map.get(pl.getName()).out.writeObject(obj);
-                map.get(pl.getName()).out.flush();
+                map.get(pl.getId()).out.writeObject(obj);
+                map.get(pl.getId()).out.flush();
             } catch (IOException e) {
             }
 
@@ -224,7 +243,6 @@ public class Server implements Runnable {
         ObjectOutputStream out;
         Player player;
         Socket socket;
-        boolean ready = false;
 
         public InternalClient(Socket socket) {
             this.socket = socket;

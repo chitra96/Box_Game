@@ -9,7 +9,7 @@ import java.awt.event.MouseMotionListener;
 public class BoardPanel extends JPanel implements MouseListener, MouseMotionListener {
     static final int OFFSET = 50;
     static final int GAP = 50;
-    static final Color HICOLOR = Color.ORANGE;
+    static final Color HICOLOR = Color.black;
     final int R = 6;
     Object lock = new Object();
     Game game;
@@ -44,7 +44,7 @@ public class BoardPanel extends JPanel implements MouseListener, MouseMotionList
     private void doDrawing(Graphics g) {
         Graphics2D g2d = (Graphics2D) g;
         g2d.setColor(game.currPlayer.getColor());
-        g2d.drawString(game.currPlayer.getName(), 10, 10);
+        g2d.drawString(turn ? "Your turn" : game.currPlayer.getName() + " turn", 10, 15);
 
 
         for (int i = 0; i < game.n - 1; i++) {
@@ -68,7 +68,7 @@ public class BoardPanel extends JPanel implements MouseListener, MouseMotionList
 
 
         g2d.setColor(Color.black);
-        g2d.setStroke(new BasicStroke());
+        g2d.setStroke(new BasicStroke(3.0f));
         for (int i = 0; i < game.n; i++) {
             for (int j = 0; j < game.n; j++) {
                 g2d.drawOval(OFFSET + i * GAP - R / 2, OFFSET + j * GAP - R / 2, R, R);
@@ -78,14 +78,21 @@ public class BoardPanel extends JPanel implements MouseListener, MouseMotionList
         if (highlighted && highlightedMove != null) {
             g2d.setColor(HICOLOR);
             g2d.drawLine(highlightedMove.getP1().getI() * GAP + OFFSET, highlightedMove.getP1().getJ() * GAP + OFFSET, highlightedMove.getP2().getI() * GAP + OFFSET, highlightedMove.getP2().getJ() * GAP + OFFSET);
+            highlighted = false;
+            highlightedMove = null;
         }
 
+        g2d.setColor(Color.black);
+        for (int i = 0; i < game.players.size(); i++) {
+            g2d.drawString(game.players.get(i).getName() + " : " + game.players.get(i).getScore(), OFFSET * 2, game.n * GAP + 3 * OFFSET / 5 + i * 15);
+        }
 
     }
 
     @Override
     public void mouseClicked(MouseEvent e) {
         if (turn) {
+            Edge temp;
             double xVal = ((double) e.getX() - OFFSET) / GAP;
             double xFrac = xVal - Math.round(xVal);
             double yVal = ((double) e.getY() - OFFSET) / GAP;
@@ -95,12 +102,18 @@ public class BoardPanel extends JPanel implements MouseListener, MouseMotionList
                 x1 = x2 = (int) Math.round(xVal);
                 y1 = (int) Math.floor(yVal);
                 y2 = (int) Math.ceil(yVal);
-                move = new Edge(new Point(x1, y1), new Point(x2, y2));
+                temp = new Edge(new Point(x1, y1), new Point(x2, y2));
+                if (game.board.canBeMarked(temp)) {
+                    move = temp;
+                }
             } else if (Math.abs(yFrac) < 0.3) {
                 y1 = y2 = (int) Math.round(yVal);
                 x1 = (int) Math.floor(xVal);
                 x2 = (int) Math.ceil(xVal);
-                move = new Edge(new Point(x1, y1), new Point(x2, y2));
+                temp = new Edge(new Point(x1, y1), new Point(x2, y2));
+                if (game.board.canBeMarked(temp)) {
+                    move = temp;
+                }
             }
         }
     }

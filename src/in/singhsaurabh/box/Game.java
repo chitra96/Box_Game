@@ -1,14 +1,15 @@
 package in.singhsaurabh.box;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.Scanner;
 
 /**
  * @author Saurabh Singh
  */
 public class Game implements Runnable {
     ArrayList<Player> players;
-    Player player, mainPlayer, currPlayer;
+    Player player, currPlayer, mainPlayer;
     boolean started = false;
     Board board;
     Client client;
@@ -16,39 +17,49 @@ public class Game implements Runnable {
     BoardPanel bp;
     private Object lock = new Object();
 
-    public Game(Player pl) {
+    public Game(Player pl) throws UnknownHostException {
         players = new ArrayList<>();
         player = pl;
-        client = new Client("127.0.0.1");
+        client = new Client(InetAddress.getLocalHost().getHostAddress());
         currPlayer = Player.DUMMY;
         client.write(pl);
     }
 
-    public void setBoardSize(int n) {
-        this.n = n < 2 ? 2 : n;
+    public Game(Player pl, String addr) throws UnknownHostException {
+        players = new ArrayList<>();
+        player = pl;
+        client = new Client(addr);
+        currPlayer = Player.DUMMY;
+        client.write(pl);
+    }
+
+    public void setBoardSize() {
+        int tempSize = client.getSize();
+        this.n = tempSize < 2 ? 2 : tempSize;
         board = new Board(this.n);
     }
 
     @Override
     public void run() {
-        Scanner in = new Scanner(System.in);
+//        Scanner in = new Scanner(System.in);
         //will call and get set of players
-        mainPlayer = client.getMainPlayer();
-        System.out.println("Main Player: " + mainPlayer);
-        client.setReady(true);
-        if (player.equals(mainPlayer)) {
-            do {
-                if (client.isEveryOneReady()) {
-                    System.out.println("EveryOne ready, Wish to Continue? Type Y");
-                } else {
-                    System.out.println("Everyone is not ready, Wish to continue? Type Y");
-                }
-            } while (!"y".equalsIgnoreCase(in.next()));
-            client.write("START");
-        } else {
-            System.out.println("Waiting for main player to start game");
-        }
-        players = client.getPlayers();
+//        mainPlayer = client.getMainPlayer();
+//        System.out.println("Main Player: " + mainPlayer);
+//        client.setReady(true);
+//        if (player.equals(mainPlayer)) {
+//            do {
+//                if (client.isEveryOneReady()) {
+//                    System.out.println("EveryOne ready, Wish to Continue? Type Y");
+//                } else {
+//                    System.out.println("Everyone is not ready, Wish to continue? Type Y");
+//                }
+//            } while (!"y".equalsIgnoreCase(in.next()));
+//            client.startGame();
+//        } else {
+//            System.out.println("Waiting for main player to start game");
+//        }
+//        players = client.getPlayers();
+//        players.forEach(player1 -> System.out.println(player1+" "+player1.isReady()));
 
         while (!client.gameStarted()) {
             try {
@@ -93,6 +104,9 @@ public class Game implements Runnable {
             }
             bp.repaint();
         }
+        client.write("GAME OVER");
+        currPlayer = Player.DUMMY;
+        bp.repaint();
         System.out.println(board);
         System.out.println(board.squaresToString());
 

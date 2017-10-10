@@ -31,18 +31,24 @@ public class Client {
         }
     }
 
+    public void startGame() {
+        write("START");
+    }
 
-    public void readPlayerList() {
+    private void readPlayerList() {
 //        System.out.println("client readPlayerList called");
         Object obj = null;
         try {
             obj = in.readObject();
 //            System.out.println("client: " + obj);
             if (obj instanceof ArrayList) {
-                players = (ArrayList) obj;
+                players = (ArrayList<Player>) obj;
+                //players.forEach(player -> System.out.println("CLIENT: "+player+" "+player.isReady()));
             }
         } catch (IOException e) {
             System.out.println("exception 3");
+            e.printStackTrace();
+            System.exit(1);
         } catch (ClassNotFoundException e) {
             System.out.println("exception 4");
         }
@@ -105,41 +111,42 @@ public class Client {
     }
 
     public ArrayList<Player> getPlayers() {
+        players = null;
         do {
             write("PLAYERS");
             readPlayerList();
-        } while (players == null || players.size() < 2);
+        } while (players == null);
 
         return players;
     }
 
-    public Player readMainPlayer() {
+    private int readSize() {
 //        System.out.println("client: readMainPlayer called");
         Object obj = null;
-        Player pl = null;
+        int size = -1;
         try {
             obj = in.readObject();
 //            System.out.println("client: " + obj);
-            if (obj instanceof Player) {
-                pl = (Player) obj;
+            if (obj instanceof Integer) {
+                size = (Integer) obj;
             }
         } catch (IOException e) {
             System.out.println("exception 9");
         } catch (ClassNotFoundException e) {
             System.out.println("exception 10");
         }
-        return pl;
+        return size;
     }
 
-    public Player getMainPlayer() {
-        Player pl = null;
+    public synchronized int getSize() {
+        int size = -1;
 
-        write("Main Player");
-        pl = readMainPlayer();
-        while (pl == null) {
-            pl = readMainPlayer();
+        write("SQUARE SIZE");
+        size = readSize();
+        while (size == -1) {
+            size = readSize();
         }
-        return pl;
+        return size;
     }
 
     public boolean gameStarted() {
@@ -167,6 +174,7 @@ public class Client {
         } else {
             write("NOT READY");
         }
+
     }
 
     public boolean isEveryOneReady() {

@@ -12,6 +12,8 @@ public class Player implements Serializable {
     private String id;
     private int score;
     private Color color;
+    private boolean ready = false;
+
 
     private Player() {
         name = "Not Started";
@@ -61,6 +63,14 @@ public class Player implements Serializable {
 
     public void setColor(Color color) {
         this.color = color;
+    }
+
+    public boolean isReady() {
+        return ready;
+    }
+
+    public void setReady(boolean ready) {
+        this.ready = ready;
     }
 
     @Override
