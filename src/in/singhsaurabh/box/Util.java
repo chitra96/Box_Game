@@ -1,5 +1,11 @@
 package in.singhsaurabh.box;
 
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
+import java.net.UnknownHostException;
+import java.util.Collections;
+import java.util.Enumeration;
 import java.util.Random;
 
 public class Util {
@@ -18,5 +24,28 @@ public class Util {
             buf.append(alphabetSet.charAt(rnd.nextInt(alphabetSet.length())));
         }
         return buf.toString();
+    }
+
+    /**
+     * This method return the IP address of System in local network starting with the given String
+     * else return the localHost
+     *
+     * @param starting
+     * @return
+     * @throws SocketException
+     * @throws UnknownHostException
+     */
+    public static InetAddress getLocalIP(String starting) throws SocketException, UnknownHostException {
+        Enumeration<NetworkInterface> nets = NetworkInterface.getNetworkInterfaces();
+        for (NetworkInterface netint : Collections.list(nets)) {
+            Enumeration<InetAddress> em = netint.getInetAddresses();
+            while (em.hasMoreElements()) {
+                InetAddress temp = em.nextElement();
+                if (temp.getHostAddress().startsWith(starting)) {
+                    return temp;
+                }
+            }
+        }
+        return InetAddress.getLocalHost();
     }
 }

@@ -14,20 +14,19 @@ import java.util.List;
  * @author Saurabh Singh
  */
 public class Server implements Runnable {
-    private static final int PORT = 9002, MAX_PLAYERS = 2;
-    private static final Color[] colors = {Color.red, Color.blue, Color.yellow, Color.magenta, Color.cyan, new Color(200, 0, 150)};
-    private static Map<String, InternalClient> map = new HashMap<>();
+    private static final int PORT = 9002, MAX_PLAYERS = 6;
+    private static final Color[] colors = {Color.red, Color.blue, Color.magenta, Color.cyan, new Color(200, 0, 150), Color.yellow};
+    private static final Map<String, InternalClient> map = new HashMap<>();
     private static boolean running = false;
     Player currPlayer, mainPlayer;
-    private List<Player> currPlayers;
-    private Iterator<Player> itr;
+    private static List<Player> currPlayers;
+    private static Iterator<Player> itr;
     private ServerSocket socket;
     private static int size = 5;
 
     public Server() {
         try {
             socket = new ServerSocket(PORT, 50, InetAddress.getLocalHost());
-            System.out.println("Server started on " + InetAddress.getLocalHost().toString());
         } catch (IOException e) {
 
         }
@@ -36,7 +35,6 @@ public class Server implements Runnable {
     public Server(String host) {
         try {
             socket = new ServerSocket(PORT, 50, InetAddress.getByName(host));
-            System.out.println("Server started on " + socket.getInetAddress());
         } catch (IOException e) {
 
         }
@@ -70,6 +68,22 @@ public class Server implements Runnable {
         running = true;
         itr = currPlayers.iterator();
         nextPlayer();
+    }
+
+    public void getPlayers(ArrayList<Player> playerList) {
+        Collection<InternalClient> coll;
+        synchronized (map) {
+            coll = map.values();
+        }
+        for (InternalClient c : coll) {
+            if (c.player.isReady()) {
+                playerList.add(c.player);
+            } else {
+                //work around As it was causing some issue once a player is added  without being ready
+                //don't know why but this works
+                playerList.add(new Player(c.player.getName(), c.player.getId()));
+            }
+        }
     }
 
     public boolean allReady() {
@@ -110,14 +124,9 @@ public class Server implements Runnable {
         try {
             socket.close();
         } catch (IOException e) {
-
         }
     }
 
-    public void printMsg(Object obj, Player pl) {
-        if (pl != null)
-            System.out.println("SERVER: " + pl.getName().toUpperCase() + ": " + obj);
-    }
 
     private class Handler extends Thread {
         private InternalClient c;
@@ -139,13 +148,8 @@ public class Server implements Runnable {
                         String temp = (String) obj;
                         if (temp.equals("PLAYERS")) {
                             ArrayList<Player> playerList = new ArrayList<>();
-                            Collection<InternalClient> coll;
-                            synchronized (map) {
-                                coll = map.values();
-                            }
-                            coll.forEach(c -> playerList.add(c.player));
-                            playerList.forEach(p -> System.out.println("SERVER: " + p.getName() + " " + p.isReady()));
-                            write(playerList);
+                            getPlayers(playerList);
+                            writeToPlayer(playerList, c.player);
                         } else if ("NextPlayer".equals(temp)) {
                             write(currPlayer);
                         } else if ("READY".equals(temp)) {
@@ -177,6 +181,10 @@ public class Server implements Runnable {
                                 tempSize = size;
                             }
                             write(tempSize);
+                        } else if ("NAME".equals(temp)) {
+                            synchronized (map) {
+                                map.get(c.player.getId()).player.setName(c.player.getName() + 1);
+                            }
                         }
                     } else if (obj instanceof Player) {
                         Player tempPl = (Player) obj;
@@ -197,7 +205,12 @@ public class Server implements Runnable {
             } catch (Exception e) {
 
             } finally {
-
+                synchronized (map) {
+                    if (c.player != null && map.containsKey(c.player.getId()))
+                        map.remove(c.player.getId());
+                }
+                c.close();
+                c = null;
             }
         }
 
@@ -231,10 +244,6 @@ public class Server implements Runnable {
                 }
             });
         }
-//
-//        public void print(Object obj) {
-//            printMsg(obj, c.player);
-//        }
     }
 
 
@@ -250,15 +259,22 @@ public class Server implements Runnable {
 
         void close() {
             try {
-                in.close();
+                if (in != null) {
+                    in.close();
+                }
             } catch (IOException e) {
             }
             try {
-                out.close();
+                if (out != null) {
+                    out.flush();
+                    out.close();
+                }
             } catch (IOException e) {
             }
             try {
-                socket.close();
+                if (socket != null) {
+                    socket.close();
+                }
             } catch (IOException e) {
             }
         }

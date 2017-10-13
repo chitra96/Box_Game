@@ -14,6 +14,8 @@ public class Main extends JFrame implements MouseListener {
     JButton join = new JButton("Join");
     JButton start = new JButton("Start");
     JButton ready = new JButton("Ready");
+    JButton restart = new JButton("Restart");
+    JButton cancel = new JButton("Cancel");
     JPanel panel = new JPanel(), statusPanel = new JPanel();
     JLabel statusLabel = new JLabel();
     JTextArea mainText = new JTextArea();
@@ -42,7 +44,17 @@ public class Main extends JFrame implements MouseListener {
         host.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                String ip = JOptionPane.showInputDialog("Enter ip address to start server", "127.0.0.1");
+                String probIp = null;
+                try {
+                    probIp = Util.getLocalIP("192").getHostAddress();
+                } catch (Exception ex) {
+                    probIp = "127.0.0.1";
+                } finally {
+                    if (probIp == null) {
+                        probIp = "127.0.0.1";
+                    }
+                }
+                String ip = JOptionPane.showInputDialog("Enter ip address to start server", probIp);
                 try {
                     if (ip != null && ip.length() > 10) {
                         server = new Server(ip);
@@ -72,7 +84,16 @@ public class Main extends JFrame implements MouseListener {
         join.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                String ans = JOptionPane.showInputDialog("Enter the address to connect", "127.0.0.1");
+                String[] options = new String[]{"Scan For Host", "Enter IP Address of Host"};
+                int response = JOptionPane.showOptionDialog(panel, "What would you like to do?", "Title",
+                        JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE,
+                        null, options, options[0]);
+                String ans;
+                if (response == 0) {
+                    ans = searchActiveHosts();
+                } else {
+                    ans = JOptionPane.showInputDialog("Enter the address to connect", "127.0.0.1");
+                }
                 try {
                     if (ans != null && ans.length() > 10) {
                         game = new Game(player, ans);
@@ -91,6 +112,7 @@ public class Main extends JFrame implements MouseListener {
         ready.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                player.setReady(true);
                 game.client.setReady(true);
                 ready.setVisible(false);
                 statusLabel.setText("Waiting for game start");
@@ -106,7 +128,34 @@ public class Main extends JFrame implements MouseListener {
             }
         });
 
+        restart.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                postGameOver();
+                restart.setVisible(false);
+                if (startedGame) {
+                    start.setVisible(true);
+                } else {
+                    ready.setVisible(true);
+                }
+            }
+        });
 
+        cancel.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+
+            }
+        });
+    }
+
+    private String searchActiveHosts() {
+        // create a global thread executor
+        // which will call shutdown from cancel button
+        //create 200 as we have to check only 255 IPs
+        //else enter the IP manually
+
+        return "127.0.0.1";
     }
 
     private void updatePlayerLists() {
@@ -114,7 +163,7 @@ public class Main extends JFrame implements MouseListener {
             @Override
             public void run() {
                 StringBuilder sb = new StringBuilder("");
-                while (!game.client.gameStarted() && !flagStarted) {
+                while ((!game.client.gameStarted() && !flagStarted) || !player.isReady()) {
                     sb.delete(0, sb.length());
                     List<Player> tempList = game.client.getPlayers();
                     sb.append("Currently connected player\n");
@@ -140,19 +189,38 @@ public class Main extends JFrame implements MouseListener {
         game.bp = boardPanel;
         boardPanel.game = game;
         statusLabel.setText("");
-        new Thread(game).start();
+        Thread gameThread = new Thread(game);
+        gameThread.start();
         panel.remove(mainText);
         panel.add(boardPanel);
         panel.setMinimumSize(boardPanel.getMinimumSize());
         panel.revalidate();
         panel.repaint();
         repaint();
+        try {
+            gameThread.join();
+        } catch (InterruptedException e) {
+
+        } finally {
+            restart.setVisible(true);
+        }
+    }
+
+    private void postGameOver() {
+        game.client.write("GAME OVER");
+        flagStarted = false;
+        panel.remove(boardPanel);
+        panel.add(mainText);
+        panel.revalidate();
+        panel.repaint();
+        updatePlayerLists();
     }
 
     private void createGUI() {
         setLayout(new BoxLayout(getContentPane(), BoxLayout.PAGE_AXIS));
         add(new JLabel(player.getName()));
         mainText.setText("Welcome to Dots and Squares");
+        mainText.setEditable(false);
         panel.setLayout(new BoxLayout(panel, BoxLayout.PAGE_AXIS));
         panel.add(mainText);
         add(panel);
@@ -162,8 +230,10 @@ public class Main extends JFrame implements MouseListener {
         buttonPanel.add(join);
         buttonPanel.add(start);
         buttonPanel.add(ready);
+        buttonPanel.add(restart);
         start.setVisible(false);
         ready.setVisible(false);
+        restart.setVisible(false);
         add(buttonPanel);
 
         statusPanel.setLayout(new BoxLayout(statusPanel, BoxLayout.LINE_AXIS));

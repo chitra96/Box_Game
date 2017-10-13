@@ -10,7 +10,7 @@ import java.util.ArrayList;
 public class Game implements Runnable {
     ArrayList<Player> players;
     Player player, currPlayer, mainPlayer;
-    boolean started = false;
+    boolean running = false;
     Board board;
     Client client;
     int n;
@@ -41,26 +41,7 @@ public class Game implements Runnable {
 
     @Override
     public void run() {
-//        Scanner in = new Scanner(System.in);
-        //will call and get set of players
-//        mainPlayer = client.getMainPlayer();
-//        System.out.println("Main Player: " + mainPlayer);
-//        client.setReady(true);
-//        if (player.equals(mainPlayer)) {
-//            do {
-//                if (client.isEveryOneReady()) {
-//                    System.out.println("EveryOne ready, Wish to Continue? Type Y");
-//                } else {
-//                    System.out.println("Everyone is not ready, Wish to continue? Type Y");
-//                }
-//            } while (!"y".equalsIgnoreCase(in.next()));
-//            client.startGame();
-//        } else {
-//            System.out.println("Waiting for main player to start game");
-//        }
-//        players = client.getPlayers();
-//        players.forEach(player1 -> System.out.println(player1+" "+player1.isReady()));
-
+        running = true;
         while (!client.gameStarted()) {
             try {
                 Thread.sleep(2000);
@@ -104,15 +85,13 @@ public class Game implements Runnable {
             }
             bp.repaint();
         }
+        running = false;
         client.write("GAME OVER");
         currPlayer = Player.DUMMY;
+
         bp.repaint();
-        System.out.println(board);
-        System.out.println(board.squaresToString());
 
         client.setReady(false);
-
-        players.forEach(p -> System.out.println(p.toString() + " Score: " + p.getScore()));
     }
 
 }
