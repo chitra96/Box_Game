@@ -8,6 +8,7 @@ import java.net.Socket;
 import java.util.ArrayList;
 
 public class Client {
+    private static final Object lock = new Object();
     private final int PORT = 9002;
 
     ObjectInputStream in;
@@ -21,46 +22,37 @@ public class Client {
     public Client(String host) {
         this.host = host;
         try {
-            System.out.println("client trying connecting to server");
             socket = new Socket(InetAddress.getByName(host), PORT);
             in = new ObjectInputStream(socket.getInputStream());
             out = new ObjectOutputStream(socket.getOutputStream());
-            System.out.println("client successfully connected to server");
         } catch (IOException e) {
             System.out.println("exception 2");
         }
     }
 
-    public void startGame() {
+    public synchronized void startGame() {
         write("START");
     }
 
-    private void readPlayerList() {
-//        System.out.println("client readPlayerList called");
+    private synchronized void readPlayerList() {
         Object obj = null;
         try {
             obj = in.readObject();
-//            System.out.println("client: " + obj);
             if (obj instanceof ArrayList) {
                 players = (ArrayList<Player>) obj;
-                //players.forEach(player -> System.out.println("CLIENT: "+player+" "+player.isReady()));
             }
         } catch (IOException e) {
             System.out.println("exception 3");
-            e.printStackTrace();
-            System.exit(1);
         } catch (ClassNotFoundException e) {
             System.out.println("exception 4");
         }
     }
 
-    public Player readNextPlayer() {
-//        System.out.println("client: readNextPlayer called");
+    public synchronized Player readNextPlayer() {
         Object obj = null;
         Player pl = null;
         try {
             obj = in.readObject();
-//            System.out.println("client: " + obj);
             if (obj instanceof Player) {
                 pl = (Player) obj;
             }
@@ -72,13 +64,11 @@ public class Client {
         return pl;
     }
 
-    public Edge readNextEdge() {
-//        System.out.println("client: readNextEdge called");
+    public synchronized Edge readNextEdge() {
         Object obj = null;
         Edge ed = null;
         try {
             obj = in.readObject();
-//            System.out.println("client: " + obj);
             if (obj instanceof Edge) {
                 ed = (Edge) obj;
             }
@@ -90,7 +80,7 @@ public class Client {
         return ed;
     }
 
-    public Edge getNextEdge() {
+    public synchronized Edge getNextEdge() {
         Edge ed = null;
         ed = readNextEdge();
         while (ed == null) {
@@ -99,7 +89,7 @@ public class Client {
         return ed;
     }
 
-    public Player getNextPlayer() {
+    public synchronized Player getNextPlayer() {
         Player pl = null;
         write("NextPlayer");
         pl = readNextPlayer();
@@ -110,7 +100,7 @@ public class Client {
         return pl;
     }
 
-    public ArrayList<Player> getPlayers() {
+    public synchronized ArrayList<Player> getPlayers() {
         players = null;
         do {
             write("PLAYERS");
@@ -120,13 +110,11 @@ public class Client {
         return players;
     }
 
-    private int readSize() {
-//        System.out.println("client: readMainPlayer called");
+    private synchronized int readSize() {
         Object obj = null;
         int size = -1;
         try {
             obj = in.readObject();
-//            System.out.println("client: " + obj);
             if (obj instanceof Integer) {
                 size = (Integer) obj;
             }
@@ -149,14 +137,12 @@ public class Client {
         return size;
     }
 
-    public boolean gameStarted() {
-//        System.out.println("client: gameStarted called");
+    public synchronized boolean gameStarted() {
         write("IS GAME STARTED");
         Object obj = null;
         boolean temp = false;
         try {
             obj = in.readObject();
-//            System.out.println("client: " + obj);
             if (obj instanceof Boolean) {
                 temp = (Boolean) obj;
             }
@@ -168,7 +154,7 @@ public class Client {
         return temp;
     }
 
-    public void setReady(boolean ready) {
+    public synchronized void setReady(boolean ready) {
         if (ready) {
             write("READY");
         } else {
@@ -177,14 +163,12 @@ public class Client {
 
     }
 
-    public boolean isEveryOneReady() {
-//        System.out.println("client: isEveryOneReady called");
+    public synchronized boolean isEveryOneReady() {
         write("ALL READY");
         Object obj = null;
         boolean temp = false;
         try {
             obj = in.readObject();
-//            System.out.println("client: " + obj);
             if (obj instanceof Boolean) {
                 temp = (Boolean) obj;
             }
@@ -196,24 +180,27 @@ public class Client {
         return temp;
     }
 
-    public void write(Object obj) {
-//        System.out.println("client: going to write- " + obj);
+    public synchronized void write(Object obj) {
         try {
             out.writeObject(obj);
             out.flush();
-//            System.out.println(obj + " written");
         } catch (IOException e) {
         }
     }
 
     public void close() {
         try {
+            in.close();
+        } catch (IOException e) {
+        }
+        try {
             out.flush();
             out.close();
-            in.close();
+        } catch (IOException e) {
+        }
+        try {
             socket.close();
-        } catch (Exception e) {
-
+        } catch (IOException e) {
         }
     }
 }

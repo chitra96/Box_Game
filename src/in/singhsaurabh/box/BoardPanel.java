@@ -87,6 +87,19 @@ public class BoardPanel extends JPanel implements MouseListener, MouseMotionList
             g2d.drawString(game.players.get(i).getName() + " : " + game.players.get(i).getScore(), OFFSET * 2, game.n * GAP + 3 * OFFSET / 5 + i * 15);
         }
 
+        if (!game.running) {
+            Player win = game.players.get(0);
+            for (Player tempPl : game.players) {
+                if (win.getScore() < tempPl.getScore()) {
+                    win = tempPl;
+                }
+            }
+            for (int i = 0; i < game.players.size(); i++) {
+                if (win.getScore() == game.players.get(i).getScore()) {
+                    g2d.drawString("Winner : " + game.players.get(i).getName(), OFFSET * 4, game.n * GAP + 3 * OFFSET / 5 + i * 15);
+                }
+            }
+        }
     }
 
     @Override
